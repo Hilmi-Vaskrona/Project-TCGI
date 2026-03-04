@@ -1,28 +1,18 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import serverlessExpress from '@vendia/serverless-express';
-import express from 'express';
 
-let cachedServer: any;
+let app;
 
 async function bootstrap() {
-  const expressApp = express();
-
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressApp),
-  );
-
-  await app.init();
-
-  return serverlessExpress({ app: expressApp });
+  if (!app) {
+    app = await NestFactory.create(AppModule);
+    await app.init();
+  }
+  return app;
 }
 
-export default async function handler(req: any, res: any) {
-  if (!cachedServer) {
-    cachedServer = await bootstrap();
-  }
-
-  return cachedServer(req, res);
+export default async function handler(req, res) {
+  const server = await bootstrap();
+  const adapter = server.getHttpAdapter();
+  return adapter.getInstance()(req, res);
 }
